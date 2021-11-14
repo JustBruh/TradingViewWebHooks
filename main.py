@@ -6,6 +6,7 @@ import logging
 import datetime
 import os
 import sys
+import threading
 
 logging.basicConfig(filename="main.log", level=logging.INFO)
 
@@ -90,38 +91,18 @@ def run_server():
         logging.info(str(datetime.datetime.now()) + "    Main.py || Trying to start main.py! - ")
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, proto=0)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+ 
         server_socket.bind((config["server_host"], int(config["server_port"])))
         server_socket.listen()
 
         with requests.Session() as session:
-            logging.info(str(datetime.datetime.now()) + "    Main.py || Started main.py! - ")
             while server_socket:
-                connection_socket, client_addr = server_socket.accept()
-                data = connection_socket.recv(2048)
-            
-                request_body = split_request(data)[1]
-                request_body = str(request_body)[2:-1]
-                request_body = request_body.replace('*', "'")
-                request_body = request_body.replace("\\n", " ")
-                logging.info(str(datetime.datetime.now()) + "    Main.py || Received request body - " + request_body)
-    
-                request_body = eval("{"+request_body+"}")
-                if not is_request_valid(request_body):
-                    connection_socket.close()  
-                    continue
-    
-                request_data = request_body["Keys"]
-                endpoint_url = request_body["endpoint"]
-                if need_retrive(request_body):
-                    save_to_json(cache)
-                    logging.info(str(datetime.datetime.now()) + "Sended request, message - " + request_data + "\n Response - ")
-                    response = session.post(endpoint_url, data=request_data)
-                    logging.info(str(datetime.datetime.now()) + "Response - " + response.text)
-                else:
-                    save_to_json(cache)
+                logging.info(str(datetime.datetime.now()) + "    Main.py || Started main.py! - ")
 
-                connection_socket.close()
-            
+                connection_socket, client_addr = server_socket.accept()
+                t = threading.Thread(target=process_client, args=(connection_socket, session))
+                t.start()
+
         server_socket.close()
         logging.info(str(datetime.datetime.now()) + "    Main.py || Server socket closed - ")
 
@@ -131,12 +112,36 @@ def run_server():
             sys.exit(0)
         except SystemExit:
             os._exit(0)
-    
     except Exception as e:
         logging.error(str(datetime.datetime.now()) + "    Main.py || Exception handled! - " + str(e)) 
         server_socket.close()
     except:
         logging.error(str(datetime.datetime.now()) + "    Main.py || Non-standart exception handled! - ")
+
+
+def process_client(connection_socket, requests_session):
+    data = connection_socket.recv(2048)
+
+    request_body = split_request(data)[1]
+    request_body = str(request_body)[2:-1]
+    request_body = request_body.replace('*', "'")
+    request_body = request_body.replace("\\n", " ")
+
+    logging.info(str(datetime.datetime.now()) + "    Main.py || Received request body - " + request_body)
+    request_body = eval("{"+request_body+"}")
+
+    if not is_request_valid(request_body):
+        connection_socket.close()  
+    else: 
+        save_to_json(cache)
+        if need_retrive(request_body):
+            response = requests_session.post(request_body["endpoint"], data=request_body["Keys"])
+
+            logging.info(str(datetime.datetime.now()) + "Sended request, message - " + request_body["Keys"] + "\n Response - ")
+            logging.info(str(datetime.datetime.now()) + "Response - " + response.text)
+
+    connection_socket.close
+
 
 if __name__ == "__main__":
         run_server()
