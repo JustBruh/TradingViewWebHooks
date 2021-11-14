@@ -1,9 +1,11 @@
-import json
+import simplejson as json
 from PyQt5 import QtWidgets, QtCore
 import pandas as pd
 import os
-import socket
-import subprocess
+import logging
+import datetime
+
+logging.basicConfig(filename="ui_main.log", level=logging.INFO)
 
 with open('config.json', 'r',encoding='utf-8') as f:
     config = json.load(f)
@@ -200,11 +202,11 @@ class DashboardTableWidget(QtWidgets.QTableView):
         self.setModel(self.filter_proxy_model)
         
         self.verticalHeader().setVisible(False)
-        # self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        self.horizontalHeader().setSectionsMovable(True)
+        self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        #self.horizontalHeader().setSectionsMovable(True)
         
         self.current_table_data = None
-        self.fill_table(limit=100)
+        self.fill_table(limit=5)
 
     def row_count(self, parent=None) -> int:
         return len(self._data.values)
@@ -225,6 +227,9 @@ class DashboardTableWidget(QtWidgets.QTableView):
                 break
             data[bot_id].reverse()
             for parameters_group in data[bot_id]:
+                if limit_counter == limit:
+                    break
+
                 message = ""
                 date_time = ""
                 endpoint = ""
@@ -352,8 +357,10 @@ class DataStatWidget(QtWidgets.QWidget):
         self.cache_reset_button.clicked.connect(reset_cache)
 
         def reset_logs():
-            if os.path.isfile("tradingviewrepeater.log"):
-                os.remove("tradingviewrepeater.log")
+            if os.path.isfile("ui_main.log"):
+                os.remove("ui_main.log")
+            if os.path.isfile("main.log"):
+                os.remove("main.log")
         self.logs_reset_button.clicked.connect(reset_logs)
 
         self.timer = QtCore.QTimer(self)
@@ -519,7 +526,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
         self.filters_widget = None
         self.setup_connectins()
-        self.records_limit = 100
+        self.records_limit = 10
         self.auto_update_state = False
 
     def setup_connectins(self):
@@ -528,7 +535,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         config_setup_widget = None
         def show_config_setup_widget():
             nonlocal config_setup_widget
-            config_setup_widget = ConfigSetupWidget(["server_host", "server_port", "interpretier_path", "main.py_path"])
+            config_setup_widget = ConfigSetupWidget(["server_host", "server_port"])
             config_setup_widget.show()
             config_setup_widget.save_parameters_button.clicked.connect(close_config_setup_widget)
 
@@ -548,7 +555,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
                 if limit != '':
                     self.records_limit = int(limit)
                 else:
-                    limit = 100
+                    limit = 10
 
             app_data_widget.records_limit_save_button.clicked.connect(set_limit)
 
@@ -577,14 +584,12 @@ class UiMainWindow(QtWidgets.QMainWindow):
                     endpoints_list = self.dashboard_table_widget.current_table_data["Endpoint"].tolist()
                     for endpoint in endpoints_list:
                         
-                        if endpoint != "":
+                        if endpoint != "" and endpoint not in filtered_endpoints:
                             filtered_endpoints.append(endpoint)
                     if filtered_endpoints != []:
                         filtered_parameters[bot_id] = {"side":["long", "short"], "no_trade":["true"], "processing_result":["sent", "passed"], "endpoint":filtered_endpoints}
                     else:
                         filtered_parameters[bot_id] = {"side":["long", "short"], "no_trade":["true"], "processing_result":["sent", "passed"]}
-
-                print("Current filters - ", self.dashboard_table_widget.current_filters, " Data Table - ", self.dashboard_table_widget.current_table_data)
             
             if self.filters_widget is None:
                 self.filters_widget = FiltersWidget(filtered_parameters)
@@ -597,31 +602,15 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.search_line.textChanged.connect(self.dashboard_table_widget.filter_proxy_model.setFilterRegExp)
 
         def set_server_status():
-            state = ""
-
-            with open("data.json", "r") as f:
-                data = json.load(f)
-                alerts_count = 0
-                for bot_id in data:
-                    for alert in data[bot_id]:
-                        alerts_count += 1
-                
-                self.alerts_counter_label.setText("Alerts Count:  " + str(alerts_count))
-                
+            status = os.system("systemctl is-active webhooks.service") 
+            if status == 0:
+                self.server_state_label.setText("Enabled")
+            else:
+                self.server_state_label.setText("Disabled")
 
             if self.auto_udate_state_checkbox.isChecked() == True:
                 self.dashboard_table_widget.fill_table(self.records_limit)
     
-            try:
-                test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM, proto=0)
-                test_socket.bind((config["server_host"], int(config["server_port"])))
-            except socket.error:
-                state = "Active"
-                self.server_state_label.setText("Active")
-            finally:
-                if state != "Active" or state == "":
-                    self.server_state_label.setText("Disabled")
-                    retcode = subprocess.call([config["interpretier_path"], config["main.py_path"]])
                     
         self.server_state_timer = QtCore.QTimer(self)
         self.server_state_timer.timeout.connect(set_server_status)
@@ -638,10 +627,15 @@ if __name__ == "__main__":
 
     import sys
 
-    app = QtWidgets.QApplication(sys.argv)
-    main_window = UiMainWindow() 
-    
-    setup_app_style(app)
+    try:
 
-    main_window.show()
-    sys.exit(app.exec_())
+        logging.info(str(datetime.datetime.now()) + "    Ui_main.py || Started Ui_main.py!")
+
+        app = QtWidgets.QApplication(sys.argv)
+        main_window = UiMainWindow() 
+        setup_app_style(app)
+        main_window.show()
+        sys.exit(app.exec_())
+
+    except Exception as e:    
+        logging.error(str(datetime.datetime.now()) + "    Ui_main.py || Exception handled! - " + str(e))
