@@ -139,8 +139,8 @@ def process_client(connection_socket, requests_session):
         return None
      
     if need_retrive(request_body):
-        response = requests_session.post(request_body["endpoint"], data=request_body["Keys"])
         logging.info(str(datetime.datetime.now()) + " Sended request, message - " + request_body["Keys"])
+        response = requests_session.post(request_body["endpoint"], data=request_body["Keys"])
         logging.info(str(datetime.datetime.now()) + " Response - " + response.text)
 
     save_to_json(cache)
