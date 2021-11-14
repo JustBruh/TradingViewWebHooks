@@ -1,0 +1,54 @@
+QPushButton {
+    background-color:  #FFFFFF;
+    border-radius: 3px;
+    color: #1E2329;
+    border: 1px solid  #EAECEF;
+    font: 14px bold "Noto Sans Mono"
+}
+QPushButton::hover {
+    background-color:  #F5F5F5;
+    border-radius: 3px;
+    color: #1E2329;
+    border: 1px solid  #EAECEF;
+}
+QPushButton::clicked {
+    background-color:#F5F5F5;
+    border: 1px solid #EAECEF;
+    border-radius: 3px;
+    color:#1E2329;
+}
+
+UiMainWindow {
+    background-color: #FAFAFA;
+    border: 1px outset #EAEAEA;
+    color: #C5C5CD;
+}
+
+DashboardTableWidget {
+    background-color: #FFFFFF;
+    border: 1px solid #F2F2F2;
+    border-radius: 5px;
+    color: #1E2329;
+}
+
+QHeaderView::section{
+    background-color:  #F5F5F5;
+    border: 1px solid #F2F2F2;
+    font: bold 13px "Sans";
+    color:  #1C2833;
+}
+
+QLabel {
+    font: bold 11px "Sans";
+    color:  #1C2833;
+}
+
+
+
+QAction {
+    background-color:  #ABABD4;
+    border: 1px sunken #4F6163;
+    border-radius: 5px;
+    color: #C5C5CD;
+    border-bottom: 2px solid  #F2F2F2;
+}
