@@ -108,6 +108,7 @@ def run_server():
 
     except KeyboardInterrupt:
         print("Keyboard Interrupt")
+        save_to_json(cache)
         try:
             sys.exit(0)
         except SystemExit:
@@ -115,8 +116,10 @@ def run_server():
     except Exception as e:
         logging.error(str(datetime.datetime.now()) + "    Main.py || Exception handled! - " + str(e)) 
         server_socket.close()
+        save_to_json(cache)
     except:
         logging.error(str(datetime.datetime.now()) + "    Main.py || Non-standart exception handled! - ")
+        save_to_json(cache)
 
 
 def process_client(connection_socket, requests_session):
@@ -132,16 +135,16 @@ def process_client(connection_socket, requests_session):
 
     if not is_request_valid(request_body):
         connection_socket.close()  
-    else: 
-        save_to_json(cache)
-        if need_retrive(request_body):
-            response = requests_session.post(request_body["endpoint"], data=request_body["Keys"])
+        return None
+     
+    if need_retrive(request_body):
+        response = requests_session.post(request_body["endpoint"], data=request_body["Keys"])
+        logging.info(str(datetime.datetime.now()) + " Sended request, message - " + request_body["Keys"])
+        logging.info(str(datetime.datetime.now()) + " Response - " + response.text)
 
-            logging.info(str(datetime.datetime.now()) + "Sended request, message - " + request_body["Keys"] + "\n Response - ")
-            logging.info(str(datetime.datetime.now()) + "Response - " + response.text)
-
+    save_to_json(cache)
     connection_socket.close
 
 
 if __name__ == "__main__":
-        run_server()
+    run_server()
