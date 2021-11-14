@@ -95,9 +95,10 @@ def run_server():
         server_socket.bind((config["server_host"], int(config["server_port"])))
         server_socket.listen()
 
+        logging.info(str(datetime.datetime.now()) + "    Main.py || Started main.py! - ")
+
         with requests.Session() as session:
             while server_socket:
-                logging.info(str(datetime.datetime.now()) + "    Main.py || Started main.py! - ")
 
                 connection_socket, client_addr = server_socket.accept()
                 t = threading.Thread(target=process_client, args=(connection_socket, session))
